@@ -2,131 +2,79 @@
 import logging
 from odoo import http
 from odoo.http import request
+from .odooclient import client
 import json
 
 _logger = logging.getLogger(__name__)
-
-
+lista=[]
 class trackController(http.Controller):
     #parameter = {"CAT_CL":'2017-10-09 16:47:55',"CAT_PR":'-'}
 
-    @http.route('/track', type='http', auth='user', methods=['GET'])
-    def pos_web(self, debug=False,**k):
-        print("valor par: %s"+ request.params['CAT_CL'])
-        json_list = {
-            'clientes': [],
-            'clientes_dirs': [],
-            'productos': [],
-            'estados': [],
-        }
-        try:
-            if request.params['CAT_CL'] or request.params['CAT_CLD'] or request.params['CAT_P'] or request.params['CAT_ES']  :
-                valsproduct = {}
-                vals = {}
-                valscld = {}
-                valsstate = {}
-                valspaises = {}
 
-                ####################CLIENTES#####################################
-                partner_model = request.env['res.partner']
-                fecha_inicio = str(request.params['CAT_CL']) + '.0'
-                partner_ids = partner_model.search([('write_date','>=',fecha_inicio)])
-                cont=str(len(partner_ids))
-                data=str(request.params['CAT_CL']+' '+cont)
-                if partner_ids:
-                    insertcliente=""
-                    print(partner_ids)
-                    for p in partner_ids:
-                        print("valor de fecha clientes"+ p.write_date)
-                        if str(p.active) == False:
-                            activocl = 0
-                        else:
-                            activocl = 1
-                        insertcliente = insertcliente + "INSERT OR REPLACE INTO CLIENTE(id,id_servidor,nombre,nombre_comercial,sitio_web,puesto_trabajo,tel,movil,fax,email,id_precio_lista,active)" + " VALUES((select id from cliente where id_servidor='" + str(p.id) + "'), '" + str(p.id) + "','" + str(p.name) + "','" + str(p.display_name) + "','" + str(p.website) + "','" + str(p.function) + "','" + str(p.phone) + "','" + str(p.mobile) + "','','" + str(p.email) + "','"+str(p.property_product_pricelist.id)+ "','" + str(activocl) + "');"
-                    vals = {
-                        data:insertcliente
-                    }
-                #################### DIRECCION CLIENTES############################
-                fecha_cld = str(request.params['CAT_CLD']) + '.0'
-                partnercld_ids = partner_model.search([('write_date', '>=', fecha_cld)])
-                contcld = str(len(partnercld_ids))
-                datacld = str(request.params['CAT_CLD'] + ' ' + contcld)
-                if partnercld_ids:
-                    insertclientecld = ""
-                    print(partnercld_ids)
-                    for pcl in partnercld_ids:
-                        print("valor de fecha clientes direcciones" + p.write_date)
-                        if str(pcl.active) == False:
-                            activodir = 0
-                        else:
-                            activodir = 1
-                        if pcl.parent_id:
-                            pclid = pcl.parent_id.id
-                        else:
-                            pclid=pcl.id
-                        insertclientecld = insertclientecld + "INSERT OR REPLACE INTO cliente_direccion(id, id_servidor, id_cliente_local, id_cliente_servidor, tipo, calle, num_ext, num_int, ciudad, id_estado, cp, id_pais, contacto, email, tel, movil, notas, active) VALUES((select  id from cliente_direccion where id_servidor ='"+ str(pcl.id)+"'),'" +str(pcl.id)+"', (select id from cliente where id_servidor ='"+str(pclid)+"'),'" +str(pclid)+"','"+str(pcl.type)+"','"+str(pcl.street)+"','',"+"'','"+str(pcl.city)+"','"+str(pcl.state_id.id)+"','"+str(pcl.zip)+"','"+str(pcl.country_id.id)+"','','"+str(pcl.email)+"','"+str(pcl.phone)+"','"+str(pcl.mobile)+"','','"+str(activodir)+"');"
+    @http.route('/track/login', type='http', auth="none",methods=['GET'])
+    def loginlxtrack(self, **kw):
+        odoo = client.OdooClient(protocol='xmlrpc', host='localhost', dbname=request.params['BD'], port=8069, debug=True)
+        odoo.ServerInfo()
+        odoo.Authenticate(request.params['N'], request.params['P'])
+        print(odoo.Authenticate(request.params['N'], request.params['P']))
+        if odoo.Authenticate(request.params['N'], request.params['P']) is not False:
+            db = request.params['BD']
+            pwd = request.params['P']
+            user = request.params['N']
+            lista.append(db)
+            lista.append(user)
+            lista.append(pwd)
+            return http.local_redirect('/track/SYNC', keep_hash=True)
+        else:
+            return "ERRROR"
+        return 0
 
-                    valscld = {
-                        datacld: insertclientecld
-                    }
-                #####################PRODUCTOS###########################
-                product_model = request.env['product.template']
-                fechap_inicio = str(request.params['CAT_P']) + '.0'
-                product_ids = product_model.search([('write_date', '>=', fechap_inicio)])
-                contp = str(len(product_ids))
-                dataproduct = str(request.params['CAT_P'] + ' ' + contp)
-                if product_ids:
-                    insertproduct = ""
-                    print(product_ids)
-                    for pr in product_ids:
-                        print("valor de fecha product" + pr.write_date)
-                        if str(pr.active) == False:
-                            activoproduct = 0
-                        else:
-                            activoproduct = 1
-                        insertproduct = insertproduct + "INSERT OR REPLACE INTO producto(id_servidor,codigo,nombre,descripcion,precio_unitario,piezas_caja,active) VALUES('"+str(pr.id)+"','"+str(pr.default_code)+"','"+str(pr.name)+"','"+str(pr.description)+"','"+str(pr.list_price)+"','"+str(pr.uom_id.name)+"', '"+str(activoproduct)+"');"
-                    valsproduct = {
-                        dataproduct: insertproduct
-                    }
-                #####################Estados###########################
-                estado_model = request.env['res.country.state']
-                fechastate_inicio = str(request.params['CAT_ES']) + '.0'
-                state_ids = estado_model.search([('write_date', '>=', fechastate_inicio)])
-                contstate = str(len(state_ids))
-                datastate = str(request.params['CAT_ES'] + ' ' + contstate)
-                if state_ids:
-                        insertstate = ""
-                        print(state_ids)
-                        for state in state_ids:
-                            #print("valor de fecha state" + pr.write_date)
-                            insertstate = insertstate + "INSERT OR REPLACE INTO estado (id_servidor,id_pais,nombre,active) VALUES('" + str(state.id)+"','"+str(state.country_id.id)+"','"+str(state.name)+"','"+str(True)+"');"
+    @http.route('/track/SYNC', type='http', auth='none', methods=['GET'])
+    def track_web(self, debug=False, **k):
+        print(lista[0])
+        print(lista[1])
+        print(lista[2])
+        odoo = client.OdooClient(protocol='xmlrpc', host='localhost', dbname=lista[0], port=8069, debug=True)
+        odoo.ServerInfo()
+        odoo.Authenticate(lista[1], lista[2])
+        print(odoo.Authenticate(lista[1], lista[2]))
+        if odoo.Authenticate(lista[1], lista[2]) is not False or None :
+            json_list = {
+                'clientes': [],
+                'clientes_dirs': [],
+                'productos': [],
+                'estados': [],
+            }
+            valsproduct = {}
+            vals = {}
+            valscld = {}
+            valsstate = {}
+            valspaises = {}
+            insertcliente = ''
+            ####################CLIENTES#####################################
+            fecha_inicio = request.params['CAT_CL'] + '.0'
+            print("fecha inicio %s" % fecha_inicio)
+            cont = odoo.SearchCount('res.partner',
+                                    [('write_date', '>=', fecha_inicio)])
 
-                        valsstate = {
-                            datastate: insertstate
-                        }
-                #####################Paises###########################
-                #paises_model = request.env['res.country']
-                #fechapaises_inicio = str(request.params['CAT_PA']) + '.0'
-                #paises_ids = estado_model.search([('write_date', '>=', fechapaises_inicio)])
-                #contpaises = str(len(state_ids))
-                #datapaises= str(request.params['CAT_PA'] + ' ' + contpaises)
-                #if paises_ids:
-                #    insertpaises = ""
-                #    for pais in paises_ids:
-                #        print("valor de fecha pais" + pr.write_date)
-                #        insertpaises = insertpaises + "INSERT OR REPLACE INTO pais (id_servidor,nombre,active) VALUES(" + str(pais.id) +",'" + str(pais.name) + "'," + str(True) + ");"
+            partners = odoo.SearchRead('res.partner',[('write_date', '>=', fecha_inicio)],
+                                        ['name', 'display_name', 'website', 'function', 'phone', 'mobile', 'email', 'active'])
+            data = str(request.params['CAT_CL'] + ' ' )+str(cont)
 
-                #    valspaises = {
-                #        datapaises: insertpaises
-                #    }
-                json_list['clientes'].append(vals)
-                json_list['clientes_dirs'].append(valscld)
-                json_list['productos'].append(valsproduct)
-                json_list['estados'].append(valsstate)
-                #json_list['paises'].append(valspaises)
-            return json.dumps(json_list)
-        except Exception as e:
-            print(e)
-        return json.dumps({'status': 0, 'data': 'Existe un problema en la API :o'})
-
+            for p in partners:
+                if str(p['active']) == False:
+                    activo = 0
+                else:
+                    activo = 1
+                
+                insertcliente = insertcliente  + "INSERT OR REPLACE INTO CLIENTE(id,id_servidor,nombre,nombre_comercial,sitio_web,puesto_trabajo,tel,movil,fax,email,id_precio_lista,active) VALUES((select id from cliente where id_servidor='" + str(p['id']) + "'), '" + str(p['id']) + "','" + str(p['name']) + "','" + str(p['display_name']) + "','" + str(p['website']) + "','" + str(p['function']) + "','" + str(p['phone']) + "','" + str(p['mobile']) + "','','" + str(p['email']) + "','"+1+"','" + str(activo) + "');"
+            vals = {
+                data: insertcliente
+            }
+            json_list['clientes'].append(vals)
+            json_list['clientes_dirs'].append(valscld)
+            json_list['productos'].append(valsproduct)
+            json_list['estados'].append(valsstate)
+            # json_list['paises'].append(valspaises)
+        return json.dumps(json_list)
 

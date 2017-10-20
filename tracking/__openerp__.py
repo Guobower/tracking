@@ -1,31 +1,18 @@
 # -*- coding: utf-8 -*-
+# Part of Odoo. See LICENSE file for full copyright and licensing details.
+
 {
-    'name': "Tracking",
-
-    'summary': """
-       Tracking""",
-
-    'description': """
-   Tracking
-    """,
-
-    'author': "Nayeli Valencia Díaz",
-    'website': "http://www.xmarts.com",
-
-    # Categories can be used to filter modules in modules listing
-    # Check https://github.com/odoo/odoo/blob/master/openerp/addons/base/module/module_data.xml
-    # for the full list
-    'category': 'Uncategorized',
-    'version': '0.1',
-
-    # any module necessary for this one to work correctly
-    'depends': [],
-    # always loaded
-    'data': [
-       # 'views/sale_order.xml',
-#'views/track_template.xml',
-    ],
-    # only loaded in demonstration mode
-    'demo': [
-    ],
+    'name': 'Tracking',
+    'category': 'Hidden',
+    'version': '1.0',
+    'description':
+        """
+Odoo Web Tracking module.
+========================
+This module provides the lxtrack of the Odoo Web Client.
+        """,
+    'depends': ['base'],
+    'auto_install': True,
+    'data': [],
+    'bootstrap': True,
 }
