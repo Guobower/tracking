@@ -13,6 +13,8 @@ This module provides the lxtrack of the Odoo Web Client.
         """,
     'depends': ['base'],
     'auto_install': True,
-    'data': [],
+    'data': [
+
+    ],
     'bootstrap': True,
 }

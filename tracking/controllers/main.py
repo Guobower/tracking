@@ -4,31 +4,80 @@ from odoo import http
 from odoo.http import request
 from .odooclient import client
 import json
+import time
 
 _logger = logging.getLogger(__name__)
 lista=[]
+pwd_admin='admin'
 class trackController(http.Controller):
     #parameter = {CAT_CL=2017-10-09 16:47:55,"CAT_PR":'-'}
-    #localhost:8069/track/login?BD=odoo11&N=admin&P=admin
+    #localhost:8069/track/login?BD=web&N=admin&P=admin&DTO=Samsung gt8&DTY=0&E=SAMSUNG GT8&V=3.3
 
 
     @http.route('/track/login', type='http', auth="none",methods=['GET'])
     def loginlxtrack(self, **kw):
-        odoo = client.OdooClient(protocol='xmlrpc', host='localhost', dbname=request.params['BD'], port=8069, debug=True)
-        odoo.ServerInfo()
-        odoo.Authenticate(request.params['N'], request.params['P'])
-        print(odoo.Authenticate(request.params['N'], request.params['P']))
-        if odoo.Authenticate(request.params['N'], request.params['P']) is not False:
-            db = request.params['BD']
-            pwd = request.params['P']
-            user = request.params['N']
-            lista.append(db)
-            lista.append(user)
-            lista.append(pwd)
-            return http.local_redirect('/track/SYNC', keep_hash=True)
+        print(request.params)
+        if 'BD' in request.params and 'N' in request.params and 'P' in request.params:
+            odoo = client.OdooClient(protocol='xmlrpc', host='localhost', dbname=request.params['BD'], port=8069,
+                                 debug=True)
+            odoo.ServerInfo()
+            print("hola")
+            odoo.Authenticate('admin', 'admin')
+            # print(odoo.Authenticate(request.params['N'], request.params['P']))
+            if odoo.IsAuthenticated() is True:
+                db = request.params['BD']
+                pwd = request.params['P']
+                user = request.params['N']
+                employee_user = odoo.SearchCount('hr.employee',
+                                                 [('active', '=', True), ('name', '=', user), ('password', '=', pwd)])
+                if employee_user == 0:
+                    return '{"​ error​ ":"DATA"}'
+                else:
+                    lista.append(db)
+                    lista.append(user)
+                    lista.append(pwd)
+                    employee = odoo.SearchRead('hr.employee',
+                                               [('active', '=', True), ('name', '=', user), ('password', '=', pwd)],
+                                               ['id', 'name'])
+                    for e in employee:
+                        print(str(e['name']))
+                        json_exitoso = {
+                            'resultado': {
+                                "id_usuario": str(e['id']),
+                                "nombre_usuario": str(e['name']),
+                                "id_session_app": "1",
+                                "rastreo_frecuencia": "15",
+                                "rastreo_hora_inicio": time.strftime("%H:%M:%S"),
+                                "rastreo_hora_termino​":time.strftime("%H:%M:%S"),
+                                "rastreo_lunes": "1",
+                                "rastreo_martes": "1",
+                                "rastreo_miercoles": "1",
+                                "rastreo_jueves": "1",
+                                "rastreo_viernes": "1",
+                                "rastreo_sabado": "1",
+                                "rastreo_domingo": "1",
+                                "abrir_candado_posicion_manual": "11",
+                                "abrir_candado_logout": "",
+                                "abrir_candado_gastos_ordenes": "",
+                                "abrir_candado_gastos_generales": "",
+                                "abrir_candado_eliminar_xml_local_gastos": "",
+                                "abrir_candado_impresion": "1",
+                                "abrir_candado_autorizar_cliente": "1",
+                                "abrir_candado_modulo_alta_ordenes": "1",
+                                "abrir_candado_modulo_alta_clientes": "1",
+                                "abrir_candado_gps_obligatorio": "1",
+                                "incluir_catalogo": "1",
+                                "limite_size_fotos": "320",
+                                "limite_size_fotos_layout": "320",
+                                "abrir_candado_datos_obligatorios": "1"
+                            }
+                        }
+                    return json.dumps(json_exitoso)
+
+            else:
+                return '{"​ error​ ":"DB"}'
         else:
-            return "ERRROR"
-        return 0
+            return '{"​ error​ ": "INVALID"}'
 
     @http.route('/track/SYNC', type='http', auth='none', methods=['GET'])
     def track_web(self, debug=False, **k):
@@ -36,12 +85,12 @@ class trackController(http.Controller):
         print(lista[1])
         print(lista[2])
         print('CAT_CL' in request.params)
+        print(lista)
 
         odoo = client.OdooClient(protocol='xmlrpc', host='localhost', dbname=lista[0], port=8069, debug=True)
         odoo.ServerInfo()
-        odoo.Authenticate(lista[1], lista[2])
-        print(odoo.Authenticate(lista[1], lista[2]))
-        if odoo.Authenticate(lista[1], lista[2]) is not False or None :
+        odoo.Authenticate('admin', pwd_admin)
+        if odoo.Authenticate('admin', pwd_admin) is not False or None :
             json_list = {
                 'clientes': [],
                 'clientes_dirs': [],
