@@ -11,11 +11,12 @@ lista=[]
 pwd_admin='admin'
 class trackController(http.Controller):
     #parameter = {CAT_CL=2017-10-09 16:47:55,"CAT_PR":'-'}
+    #http://localhost:8069/track/SYNC?CAT_CL=2017-10-13%2016:47:55&CAT_CLD=2017-10-10%2016:47:55&CAT_P=2017-10-13%2016:47:55&CAT_ES=2017-10-13%2016:47:55&CAT_PA=2017-10-13%2016:47:55&CAT_PLP=2017-10-13%2016:47:55&CAT_TA=2017-10-13%2016:47:55&CAT_PLP=2017-10-13%2016:47:55&CAT_CUB=2017-10-13%2016:47:55
     #localhost:8069/track/login?BD=web&N=admin&P=admin&DTO=Samsung gt8&DTY=0&E=SAMSUNG GT8&V=3.3
 
 
     @http.route('/track/login', type='http', auth="none",methods=['GET'])
-    def loginlxtrack(self, **kw):
+    def loginlxtrack(self, cookies=None,**kw):
         print(request.params)
         if 'BD' in request.params and 'N' in request.params and 'P' in request.params:
             odoo = client.OdooClient(protocol='xmlrpc', host='localhost', dbname=request.params['BD'], port=8069,
@@ -96,15 +97,34 @@ class trackController(http.Controller):
                 'clientes_dirs': [],
                 'productos': [],
                 'estados': [],
+                'paises': [],
+                'tarifas': [],
+                'plazos_pago': [],
+                'metodos_pago': [],
+                'cuentas_bancarias': [],
+
             }
             valsproduct = {}
             vals = {}
             valscld = {}
             valsstate = {}
             valspaises = {}
+            valstarifa = {}
+            valsplp= {}
+            valsmep = {}
+            valscub = {}
             insertcliente = ''
-            ####################CLIENTES#####################################
-            if 'CAT_CL' in request.params:
+            insertcliente_cld = ''
+            insertproduct=''
+            insertstate=''
+            insertpais=''
+            inserttarifa=''
+            insertplp = ''
+            insertmep = ''
+            insertcub = ''
+
+            if 'CAT_CL' in request.params or 'CAT_CLD' in request.params or 'CAT_P' in request.params or 'CAT_ES' in request.params or 'CAT_PA' in request.params or 'CAT_PLP'  in request.params  or 'CAT_TA'  in request.params  or 'CAT_PLP'  in request.params  or 'CAT_CUB'  in request.params :
+                ####################CLIENTES#####################################
                 fecha_inicio = request.params['CAT_CL'] + '.0'
                 print("fecha inicio %s" % fecha_inicio)
                 cont = odoo.SearchCount('res.partner',
@@ -113,16 +133,174 @@ class trackController(http.Controller):
                 partners = odoo.SearchRead('res.partner',[('write_date', '>=', fecha_inicio)],
                                             ['name', 'display_name', 'website', 'function', 'phone', 'mobile', 'email', 'active'])
                 data = str(request.params['CAT_CL'] + ' ' )+str(cont)
+                if partners is not None:
+                    for p in partners:
+                        if str(p['active']) == False:
+                            activo = 0
+                        else:
+                            activo = 1
 
-                for p in partners:
-                    if str(p['active']) == False:
-                        activo = 0
-                    else:
-                        activo = 1
-
-                    insertcliente = insertcliente  + "INSERT OR REPLACE INTO CLIENTE(id,id_servidor,nombre,nombre_comercial,sitio_web,puesto_trabajo,tel,movil,fax,email,id_precio_lista,active) VALUES((select id from cliente where id_servidor='" + str(p['id']) + "'), '" + str(p['id']) + "','" + str(p['name']) + "','" + str(p['display_name']) + "','" + str(p['website']) + "','" + str(p['function']) + "','" + str(p['phone']) + "','" + str(p['mobile']) + "','','" + str(p['email']) + "','"+str(1)+"','" + str(activo) + "');"
+                        insertcliente = insertcliente  + "INSERT OR REPLACE INTO CLIENTE(id,id_servidor,nombre,nombre_comercial,sitio_web,puesto_trabajo,tel,movil,fax,email,id_precio_lista,active) VALUES((select id from cliente where id_servidor='" + str(p['id']) + "'), '" + str(p['id']) + "','" + str(p['name']) + "','" + str(p['display_name']) + "','" + str(p['website']) + "','" + str(p['function']) + "','" + str(p['phone']) + "','" + str(p['mobile']) + "','','" + str(p['email']) + "','"+str(1)+"','" + str(activo) + "');"
                 vals = {
                     data: insertcliente
+                }
+                #################### DIRECCION CLIENTES############################
+                fecha_inicio_cld = request.params['CAT_CLD'] + '.0'
+                print("fecha inicio %s" % fecha_inicio_cld)
+                contcld = odoo.SearchCount('res.partner',
+                                        [('write_date', '>=', fecha_inicio_cld)])
+
+                partners_cld = odoo.SearchRead('res.partner', [('write_date', '>=', fecha_inicio_cld)],
+                                           ['id','type','street','city','state_id','zip','country_id','email','phone','mobile','parent_id'])
+                data_cld = str(request.params['CAT_CLD'] + ' ') + str(contcld)
+                if partners_cld is not None:
+                    for pcl in partners_cld:
+                        activo_cld = 1
+                        if pcl['parent_id']:
+                            pclid = pcl['parent_id']
+                        else:
+                            pclid = pcl['id']
+
+                        insertcliente_cld = insertcliente_cld + "INSERT OR REPLACE INTO cliente_direccion(id, id_servidor, id_cliente_local, id_cliente_servidor, tipo, calle, num_ext, num_int, ciudad, id_estado, cp, id_pais, contacto, email, tel, movil, notas, active) VALUES((select  id from cliente_direccion where id_servidor ='"+ str(pcl['id']) + "'),'" + str(pcl['id']) + "', (select id from cliente where id_servidor ='" + str(pclid) + "'),'" + str(pclid) + "','" + str(pcl['type']) + "','" + str(pcl['street']) + "',''," + "'','" + str(pcl['city']) + "','" + str(pcl['state_id']) + "','" + str(pcl['zip']) + "','" + str(pcl['country_id']) + "','','" + str(pcl['email']) + "','" + str(pcl['phone']) + "','" + str(pcl['mobile']) + "','','" + str(activo_cld) + "');"
+
+                valscld = {
+                    data_cld: insertcliente_cld
+                }
+                #####################PRODUCTOS###########################
+                fecha_inicio_p= request.params['CAT_P'] + '.0'
+                print("fecha inicio %s" % fecha_inicio_p)
+                contp = odoo.SearchCount('product.product',
+                                        [('write_date', '>=', fecha_inicio_p)])
+
+                product= odoo.SearchRead('product.product', [('write_date', '>=', fecha_inicio_p)],
+                                               ['id','default_code','name','description','list_price','uom_id','active'])
+                data_pr = str(request.params['CAT_P'] + ' ') + str(contp)
+                if product is not None:
+                    for pr in product:
+                        if str(pr['active']) == False:
+                            activop = 0
+                        else:
+                            activop = 1
+                        insertproduct = insertproduct + "INSERT OR REPLACE INTO producto(id_servidor,codigo,nombre,descripcion,precio_unitario,piezas_caja,active) VALUES('" + str(pr['id']) + "','" + str(pr['default_code']) + "','" + str(pr['name']) + "','" + str(pr['description']) + "','" + str(pr['list_price']) + "','" + str(pr['uom_id']) + "', '" + str(activop) + "');"
+                valsproduct = {
+                    data_pr: insertproduct
+                }
+                #####################Estados###########################
+                fecha_inicio_state = request.params['CAT_ES'] + '.0'
+                print("fecha inicio %s" % fecha_inicio_state)
+                contstate = odoo.SearchCount('res.country.state',
+                                         [('write_date', '>=', fecha_inicio_state)])
+
+                state_ids = odoo.SearchRead('res.country.state', [('write_date', '>=', fecha_inicio_state)],
+                                          ['id', 'country_id','name','active'])
+                datastate = str(request.params['CAT_ES'] + ' ') + str(contstate)
+                if state_ids is not None:
+                    for state in state_ids:
+                        activostate = 1
+                        insertstate = insertstate + "INSERT OR REPLACE INTO estado (id_servidor,id_pais,nombre,active) VALUES('" + str(state['id']) + "','" + str(state['country_id']) + "','" + str(state['name']) + "','" + str(activostate) + "');"
+
+                valsstate = {
+                    datastate: insertstate
+                }
+                #####################Paises###########################
+                fecha_inicio_pais = request.params['CAT_PA'] + '.0'
+                print("fecha inicio %s" % fecha_inicio_pais)
+                contpais = odoo.SearchCount('res.country',
+                                             [('write_date', '>=', fecha_inicio_pais)])
+
+                pais_ids = odoo.SearchRead('res.country', [('write_date', '>=', fecha_inicio_pais)],
+                                            ['id','name','active'])
+                datapais = str(request.params['CAT_PA'] + ' ') + str(contpais)
+                if pais_ids is not None:
+                    for pais in pais_ids:
+                        activopais = 1
+                        insertpais = insertpais + "INSERT OR REPLACE INTO pais (id_servidor,nombre,active) VALUES(" + str(pais['id']) + ",'" + str(pais['name']) + "'," + str(activopais) + ");"
+
+                valspaises = {
+                    datapais: insertpais
+                }
+                #####################TARIFAS###########################
+                fecha_inicio_tarifa = request.params['CAT_TA'] + '.0'
+                print("fecha inicio %s" % fecha_inicio_tarifa)
+                conttarifa = odoo.SearchCount('product.pricelist',
+                                            [('write_date', '>=', fecha_inicio_tarifa)])
+
+                tarifa_ids = odoo.SearchRead('product_pricelist', [('write_date', '>=', fecha_inicio_tarifa)],
+                                           ['id', 'name', 'active'])
+                print("valor de tarifas")
+                print(tarifa_ids)
+                datatarifa = str(request.params['CAT_TA'] + ' ') + str(conttarifa)
+                if tarifa_ids is not None:
+                    for tarifa in tarifa_ids:
+                        if tarifa['active'] ==False:
+                            activotarifa = 0
+                        else:
+                            activotarifa=1
+                        inserttarifa = inserttarifa + "INSERT OR REPLACE INTO tarifa(id_servidor,nombre,active) VALUES(" + str(tarifa['id']) + ",'" + str(tarifa['name']) + "'," + str(activotarifa) + ");"
+
+                valstarifa = {
+                    datatarifa: inserttarifa
+                }
+                ####################PLAZOS DE PAGO###########################
+                fecha_inicio_plp = request.params['CAT_PLP'] + '.0'
+                print("fecha inicio %s" % fecha_inicio_plp)
+                contplp= odoo.SearchCount('account.payment.term',
+                                              [('write_date', '>=', fecha_inicio_plp)])
+
+                plp_ids = odoo.SearchRead('account.payment.term', [('write_date', '>=', fecha_inicio_plp)],
+                                             ['id', 'name', 'active'])
+                dataplp= str(request.params['CAT_PLP'] + ' ') + str(contplp)
+                if plp_ids is not None:
+                    for plp in plp_ids:
+                        if plp['active'] == False:
+                            activoplp = 0
+                        else:
+                            activoplp= 1
+                        insertplp = insertplp + "INSERT OR REPLACE INTO ​plaza_pago(id_servidor,nombre,active) VALUES(" + str(plp['id']) + ",'" + str(plp['name']) + "'," + str(activoplp) + ");"
+
+                valsplp = {
+                    dataplp: insertplp
+                }
+                ####################METODO DE PAGO###########################
+                #fecha_inicio_mep = request.params['CAT_MEP'] + '.0'
+                #print("fecha inicio %s" % fecha_inicio_mep)
+                #contmep = odoo.SearchCount('account.payment.term',
+                #                           [('write_date', '>=', fecha_inicio_mep)])
+
+                #mep_ids = odoo.SearchRead('account.payment.term', [('write_date', '>=', fecha_inicio_mep)],
+                #                          ['id', 'name', 'active'])
+                #datamep = str(request.params['CAT_MEP'] + ' ') + str(contmep)
+
+                #for mep in mep_ids:
+                #    if mep['active'] == False:
+                #        activomep = 0
+                #    else:
+                #        activomep = 1
+                #    insertmep = insertmep + "INSERT OR REPLACE INTO ​plaza_pago(id_servidor,nombre,active) VALUES(" + str(
+                #        plp['id']) + ",'" + str(plp['name']) + "'," + str(activoplp) + ");"
+
+                #valsmep = {
+                #    datamep: insertmep
+                #}
+                ####################CUENTAS BANCARIAS###########################
+                fecha_inicio_cub = request.params['CAT_CUB'] + '.0'
+                print("fecha inicio %s" % fecha_inicio_cub)
+                contcub = odoo.SearchCount('res.bank',
+                                           [('write_date', '>=', fecha_inicio_cub)])
+
+                cub_ids = odoo.SearchRead('res.bank', [('write_date', '>=', fecha_inicio_cub)],
+                                          ['id', 'name', 'active'])
+                datacub = str(request.params['CAT_CUB'] + ' ') + str(contcub)
+                if cub_ids is not None:
+                    for cub in cub_ids:
+                        if cub['active'] == False:
+                            activocub = 0
+                        else:
+                            activocub = 1
+                        insertcub = insertcub + "INSERT OR REPLACE INTO ​plaza_pago(id_servidor,nombre,active) VALUES(" + str(cub['id']) + ",'" + str(cub['name']) + "'," + str(activocub) + ");"
+
+                valscub = {
+                    datacub: insertcub
                 }
 
             else:
@@ -132,22 +310,154 @@ class trackController(http.Controller):
                                            ['name', 'display_name', 'website', 'function', 'phone', 'mobile', 'email',
                                             'active'])
                 data = str(cont)
+                if partners is not None:
+                    for p in partners:
+                        if str(p['active']) == False:
+                            activo = 0
+                        else:
+                            activo = 1
 
-                for p in partners:
-                    if str(p['active']) == False:
-                        activo = 0
-                    else:
-                        activo = 1
-
-                    insertcliente = insertcliente + "INSERT OR REPLACE INTO CLIENTE(id,id_servidor,nombre,nombre_comercial,sitio_web,puesto_trabajo,tel,movil,fax,email,id_precio_lista,active) VALUES((select id from cliente where id_servidor='" + str(p['id']) + "'), '" + str(p['id']) + "','" + str(p['name']) + "','" + str(p['display_name']) + "','" + str(p['website']) + "','" + str(p['function']) + "','" + str(p['phone']) + "','" + str(p['mobile']) + "','','" + str(p['email']) + "','" + str(1) + "','" + str(activo) + "');"
+                        insertcliente = insertcliente + "INSERT OR REPLACE INTO CLIENTE(id,id_servidor,nombre,nombre_comercial,sitio_web,puesto_trabajo,tel,movil,fax,email,id_precio_lista,active) VALUES((select id from cliente where id_servidor='" + str(p['id']) + "'), '" + str(p['id']) + "','" + str(p['name']) + "','" + str(p['display_name']) + "','" + str(p['website']) + "','" + str(p['function']) + "','" + str(p['phone']) + "','" + str(p['mobile']) + "','','" + str(p['email']) + "','" + str(1) + "','" + str(activo) + "');"
                 vals = {
                     data: insertcliente
                 }
+                #################### DIRECCION CLIENTES############################
+
+                cont = odoo.SearchCount('res.partner',[])
+                partners_cld = odoo.SearchRead('res.partner', [],
+                                               ['id', 'type', 'street', 'city', 'state_id', 'zip', 'country_id',
+                                                'email', 'phone', 'mobile','parent_id' ])
+                data_cld =str(cont)
+                if partners_cld is not None:
+                    for pcl in partners_cld:
+                        if pcl['parent_id']:
+                            pclid = pcl['parent_id']
+                        else:
+                            pclid = pcl['id']
+
+                        insertcliente_cld = insertcliente_cld + "INSERT OR REPLACE INTO cliente_direccion(id, id_servidor, id_cliente_local, id_cliente_servidor, tipo, calle, num_ext, num_int, ciudad, id_estado, cp, id_pais, contacto, email, tel, movil, notas, active) VALUES((select  id from cliente_direccion where id_servidor ='"+ str(pcl['id']) + "'),'" + str(pcl['id']) + "', (select id from cliente where id_servidor ='" + str(pclid) + "'),'" + str(pclid) + "','" + str(pcl['type']) + "','" + str(pcl['street']) + "',''," + "'','" + str(pcl['city']) + "','" + str(pcl['state_id']) + "','" + str(pcl['zip']) + "','" + str(pcl['country_id']) + "','','" + str(pcl['email']) + "','" + str(pcl['phone']) + "','" + str(pcl['mobile']) + "','','" + str(1) + "');"
+
+                valscld = {
+                    data_cld: insertcliente_cld
+                }
+                #####################PRODUCTOS###########################
+                contp = odoo.SearchCount('product.product',
+                                         [])
+
+                product = odoo.SearchRead('product.product', [],
+                                          ['id','default_code','name','description','list_price','uom_id','active' ])
+                data_pr =  str(contp)
+                if product is not None:
+                    for pr in product:
+                        if str(pr['active']) == False:
+                            activop = 0
+                        else:
+                            activop = 1
+                        insertproduct = insertproduct + "INSERT OR REPLACE INTO producto(id_servidor,codigo,nombre,descripcion,precio_unitario,piezas_caja,active) VALUES('" + str(
+                            pr['id']) + "','" + str(pr['default_code']) + "','" + str(pr['name']) + "','" + str(
+                            pr['description']) + "','" + str(pr['list_price']) + "','" + str(pr['uom_id']) + "', '" + str(
+                            activop) + "');"
+                valsproduct = {
+                    data_pr: insertproduct
+                }
+                #####################Estados###########################
+                contstate = odoo.SearchCount('res.country.state',[])
+                state_ids = odoo.SearchRead('res.country.state', [],
+                                            ['id', 'country_id', 'name','active'])
+                datastate = str(contstate)
+                if state_ids is not None:
+                    for state in state_ids:
+                        activostate = 1
+                        insertstate = insertstate + "INSERT OR REPLACE INTO estado (id_servidor,id_pais,nombre,active) VALUES('" + str(
+                            state['id']) + "','" + str(state['country_id']) + "','" + str(state['name']) + "','" + str(
+                            activostate) + "');"
+
+                valsstate = {
+                    datastate: insertstate
+                }
+                #####################Paises###########################
+                contpais = odoo.SearchCount('res.country',
+                                            [])
+
+                pais_ids = odoo.SearchRead('res.country', [],
+                                           ['id', 'name','active'])
+                datapais = str(contpais)
+                if pais_ids is not None:
+                    for pais in pais_ids:
+                        activopais = 1
+                        insertpais = insertpais + "INSERT OR REPLACE INTO pais (id_servidor,nombre,active) VALUES(" + str(
+                            pais['id']) + ",'" + str(pais['name']) + "'," + str(activopais) + ");"
+
+                valspaises = {
+                    datapais: insertpais
+                }
+                #####################TARIFASs###########################
+                conttarifa = odoo.SearchCount('product_pricelist',
+                                              [])
+
+                tarifa_ids = odoo.SearchRead('product_pricelist', [],
+                                             ['id', 'name', 'active'])
+                datatarifa = str(conttarifa)
+                if tarifa_ids is not None:
+                    for tarifa in tarifa_ids:
+                        if tarifa['active'] == False:
+                            activotarifa = 0
+                        else:
+                            activotarifa = 1
+                        inserttarifa = inserttarifa + "INSERT OR REPLACE INTO tarifa(id_servidor,nombre,active) VALUES(" + str(
+                            tarifa['id']) + ",'" + str(tarifa['name']) + "'," + str(activotarifa) + ");"
+
+                valstarifa = {
+                    datatarifa: inserttarifa
+                }
+                ####################PLAZOS DE PAGO###########################
+                contplp = odoo.SearchCount('account.payment.term', [])
+                plp_ids = odoo.SearchRead('account.payment.term', [],
+                                          ['id', 'name', 'active'])
+                dataplp = str(contplp)
+                if plp_ids is not None:
+                    for plp in plp_ids:
+                        if plp['active'] == False:
+                            activoplp = 0
+                        else:
+                            activoplp = 1
+                        insertplp = insertplp + "INSERT OR REPLACE INTO ​plaza_pago(id_servidor,nombre,active) VALUES(" + str(
+                            plp['id']) + ",'" + str(plp['name']) + "'," + str(activoplp) + ");"
+
+                valsplp = {
+                    dataplp: insertplp
+                }
+                ####################CUENTAS BANCARIAS###########################
+                contcub = odoo.SearchCount('res.bank',
+                                           [])
+
+                cub_ids = odoo.SearchRead('res.bank', [],
+                                          ['id', 'name', 'active'])
+                datacub = str(request.params['CAT_CUB'] + ' ') + str(contcub)
+                if cub_ids is not None:
+                    for cub in cub_ids:
+                        if cub['active'] == False:
+                            activocub = 0
+                        else:
+                            activocub = 1
+                        insertcub = insertcub + "INSERT OR REPLACE INTO ​plaza_pago(id_servidor,nombre,active) VALUES(" + str(
+                            cub['id']) + ",'" + str(cub['name']) + "'," + str(activocub) + ");"
+
+                valscub = {
+                    datacub: insertcub
+                }
+
+
 
             json_list['clientes'].append(vals)
             json_list['clientes_dirs'].append(valscld)
             json_list['productos'].append(valsproduct)
             json_list['estados'].append(valsstate)
-            # json_list['paises'].append(valspaises)
+            json_list['paises'].append(valspaises)
+            json_list['tarifas'].append(valstarifa)
+            json_list['plazos_pago'].append(valstarifa)
+            json_list['metodos_pago'].append(valsmep)
+            json_list['cuentas_bancarias'].append(valscub)
+            lista.clear()
         return json.dumps(json_list)
 

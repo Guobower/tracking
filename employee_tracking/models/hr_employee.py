@@ -2,10 +2,26 @@
 
 from openerp import models, fields, api, _, tools
 from openerp.exceptions import UserError, RedirectWarning, ValidationError
-import xlrd
 import shutil
 import logging
+from hashlib import sha1
 _logger = logging.getLogger(__name__)
 class HrEmployee(models.Model):
     _inherit = 'hr.employee'
     password = fields.Char('Contraseña')
+
+    @api.model
+    def create(self, vals):
+        if vals['password'] is not False or vals['password'] is not  None:
+            val=str(vals['password']).encode('utf-8')
+            pasw= sha1(val).hexdigest()
+            vals['password']=pasw
+        return super(HrEmployee, self).create(vals)
+
+    @api.one
+    def write(self, vals):
+        if vals.get('password'):
+            val=str(vals['password']).encode('utf-8')
+            pasw= sha1(val).hexdigest()
+            vals['password']=pasw
+        return super(HrEmployee, self).write(vals)

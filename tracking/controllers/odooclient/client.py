@@ -64,7 +64,7 @@ class OdooClient(object):
         cn = all([self._uid, self._login, self._password]) and True or False
         return cn
 
-    def Authenticate(self, login, pwd):
+    def Authenticate(self, login, pwd,session={}):
         """
         Code :
             common = xmlrpclib.ServerProxy('{}/xmlrpc/2/common'.format(url))
@@ -72,7 +72,7 @@ class OdooClient(object):
         """
         self._login, self._password = login, pwd
         service = connection.Connection(self._url)
-        self._uid = service.Authenticate(self._db, login, pwd, {})
+        self._uid = service.Authenticate(self._db, login, pwd, session)
         return self._uid
 
     def CheckSecurity(self, model, operation_modes=['read']):
