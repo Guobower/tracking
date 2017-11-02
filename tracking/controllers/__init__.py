@@ -1,1 +1,1 @@
-from . import main, sync,login
+from . import main

@@ -19,19 +19,3 @@ class nayeController(http.Controller):
     #localhost:8069/naye?n=1
 
 
-    @http.route('/naye', type='http', auth="none")
-    def index(self, s_action=None, db=None, **kw):
-        r = request.httprequest
-        response = werkzeug.utils.redirect('/', 302)
-        response = r.app.get_response(r, response, explicit_session=False)
-        werkzeug.exceptions.abort(response)
-        return response
-
-    @http.route('/to', type='http', auth="none", methods=['GET'])
-    def sync(self, **kw):
-        print(request.session)
-        return kw.get('amor')
-
-    @http.route('/efren', type='http', auth="none")
-    def efren(self, s_action=None, db=None, **kw):
-        self.sync(self,request.params)
