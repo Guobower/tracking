@@ -15,7 +15,7 @@ class trackController(http.Controller):
     #localhost:8069/track/login?BD=web&N=admin&P=admin&DTO=Samsung gt8&DTY=0&E=SAMSUNG GT8&V=3.3
 
 
-    @http.route('/track/login', type='http', auth="none",methods=['GET'])
+    @http.route('/track/login', type='http', auth="none",methods=['POST'])
     def loginlxtrack(self, cookies=None,**kw):
         print(request.params)
         if 'BD' in request.params and 'N' in request.params and 'P' in request.params:
@@ -49,7 +49,7 @@ class trackController(http.Controller):
                                 "id_session_app": "1",
                                 "rastreo_frecuencia": "15",
                                 "rastreo_hora_inicio": time.strftime("%H:%M:%S"),
-                                "rastreo_hora_termino​":time.strftime("%H:%M:%S"),
+                                "rastreo_hora_termino":time.strftime("%H:%M:%S"),
                                 "rastreo_lunes": "1",
                                 "rastreo_martes": "1",
                                 "rastreo_miercoles": "1",
@@ -57,11 +57,11 @@ class trackController(http.Controller):
                                 "rastreo_viernes": "1",
                                 "rastreo_sabado": "1",
                                 "rastreo_domingo": "1",
-                                "abrir_candado_posicion_manual": "11",
-                                "abrir_candado_logout": "",
-                                "abrir_candado_gastos_ordenes": "",
-                                "abrir_candado_gastos_generales": "",
-                                "abrir_candado_eliminar_xml_local_gastos": "",
+                                "abrir_candado_posicion_manual": "1",
+                                "abrir_candado_logout": "1",
+                                "abrir_candado_gastos_ordenes": "1",
+                                "abrir_candado_gastos_generales": "1",
+                                "abrir_candado_eliminar_xml_local_gastos": "1",
                                 "abrir_candado_impresion": "1",
                                 "abrir_candado_autorizar_cliente": "1",
                                 "abrir_candado_modulo_alta_ordenes": "1",
@@ -80,7 +80,7 @@ class trackController(http.Controller):
         else:
             return '{"​ error​ ": "INVALID"}'
 
-    @http.route('/track/SYNC', type='http', auth='none', methods=['GET'])
+    @http.route('/track/sync', type='http', auth='none', methods=['POST'])
     def track_web(self, debug=False, **k):
         print(lista[0])
         print(lista[1])
@@ -102,6 +102,8 @@ class trackController(http.Controller):
                 'plazos_pago': [],
                 'metodos_pago': [],
                 'cuentas_bancarias': [],
+                'precios': [],
+                'motivos': [],
 
             }
             valsproduct = {}
@@ -113,6 +115,8 @@ class trackController(http.Controller):
             valsplp= {}
             valsmep = {}
             valscub = {}
+            valsppre = {}
+            valsmo = {}
             insertcliente = ''
             insertcliente_cld = ''
             insertproduct=''
@@ -122,8 +126,10 @@ class trackController(http.Controller):
             insertplp = ''
             insertmep = ''
             insertcub = ''
+            insertppre = ''
+            insertmo = ''
 
-            if 'CAT_CL' in request.params or 'CAT_CLD' in request.params or 'CAT_P' in request.params or 'CAT_ES' in request.params or 'CAT_PA' in request.params or 'CAT_PLP'  in request.params  or 'CAT_TA'  in request.params  or 'CAT_PLP'  in request.params  or 'CAT_CUB'  in request.params :
+            if 'CAT_CL' in request.params or 'CAT_CLD' in request.params or 'CAT_P' in request.params or 'CAT_ES' in request.params or 'CAT_PA' in request.params or 'CAT_PLP'  in request.params  or 'CAT_TA'  in request.params  or 'CAT_PLP'  in request.params  or 'CAT_CUB'  in request.params or 'CAT_PPRE' in request.params:
                 ####################CLIENTES#####################################
                 fecha_inicio = request.params['CAT_CL'] + '.0'
                 print("fecha inicio %s" % fecha_inicio)
@@ -302,6 +308,43 @@ class trackController(http.Controller):
                 valscub = {
                     datacub: insertcub
                 }
+                ####################PRECIO DE LISTA PARA PRODUCTOS###########################
+                fecha_inicio_ppre = request.params['CAT_PPRE'] + '.0'
+                print("fecha inicio %s" % fecha_inicio_ppre)
+                contppre = odoo.SearchCount('product.pricelist.item',
+                                           [('write_date', '>=', fecha_inicio_ppre)])
+
+                ppre_ids = odoo.SearchRead('product.pricelist.item', [('write_date', '>=', fecha_inicio_ppre)],
+                                          ['id', 'pricelist_id','product_tmpl_id','price_discount' 'active'])
+                datappre= str(request.params['CAT_PPRE'] + ' ') + str(contppre)
+                if ppre_ids is not None:
+                    for ppre in ppre_ids:
+                        if ppre['active'] == False:
+                            activoppre = 0
+                        else:
+                            activoppre= 1
+                        insertppre = insertppre + "INSERT OR REPLACE INTO producto_precio_lista(id_producto,id_precio_lista,precio,active) VALUES(" + str(ppre['product_tmpl_id']) + ",'" + str(ppre['pricelist_id']) + "','" + str(ppre['price_discount']) + "','" + str(activoppre) + "');"
+
+                valsppre = {
+                    datappre: insertppre
+                }
+                    #####################MOTIVOS###########################
+                fecha_inicio_mo = request.params['CAT_MO'] + '.0'
+                print("fecha inicio %s" % fecha_inicio_mo)
+                contmo = odoo.SearchCount('reason.rejection',
+                                            [('write_date', '>=', fecha_inicio_mo)])
+
+                mo_ids = odoo.SearchRead('reason.rejection', [('write_date', '>=', fecha_inicio_mo)],
+                                           ['id', 'name', 'active'])
+                datamo = str(request.params['CAT_MO'] + ' ') + str(contmo)
+                if mo_ids is not None:
+                    for mo in mo_ids:
+                        activomo = 1
+                        insertmo = insertmo + "INSERT OR REPLACE INTO motivo (id_servidor,nombre,active) VALUES(" + str(mo['id']) + ",'" + str(mo['name']) + "'," + str(activomo) + ");"
+
+                valsmo = {
+                    datamo: insertmo
+                }
 
             else:
                 cont = odoo.SearchCount('res.partner',[])
@@ -433,7 +476,7 @@ class trackController(http.Controller):
 
                 cub_ids = odoo.SearchRead('res.bank', [],
                                           ['id', 'name', 'active'])
-                datacub = str(request.params['CAT_CUB'] + ' ') + str(contcub)
+                datacub = str(contcub)
                 if cub_ids is not None:
                     for cub in cub_ids:
                         if cub['active'] == False:
@@ -445,6 +488,41 @@ class trackController(http.Controller):
 
                 valscub = {
                     datacub: insertcub
+                }
+                ####################PRECIO DE LISTA PARA PRODUCTOS###########################
+                contppre = odoo.SearchCount('product.pricelist.item',[])
+
+                ppre_ids = odoo.SearchRead('product.pricelist.item', [],
+                                           ['id', 'pricelist_id', 'product_tmpl_id', 'price_discount' 'active'])
+                datappre =  str(contppre)
+                if ppre_ids is not None:
+                    for ppre in ppre_ids:
+                        if ppre['active'] == False:
+                            activoppre = 0
+                        else:
+                            activoppre = 1
+                        insertppre = insertppre + "INSERT OR REPLACE INTO producto_precio_lista(id_producto,id_precio_lista,precio,active) VALUES(" + str(
+                            ppre['product_tmpl_id']) + ",'" + str(ppre['pricelist_id']) + "','" + str(
+                            ppre['price_discount']) + "','" + str(activoppre) + "');"
+
+                valsppre = {
+                    datappre: insertppre
+                }
+                #####################MOTIVOS###########################
+                contmo = odoo.SearchCount('reason.rejection',
+                                          [])
+
+                mo_ids = odoo.SearchRead('reason.rejection', [],
+                                         ['id', 'name', 'active'])
+                datamo =  str(contmo)
+                if mo_ids is not None:
+                    for mo in mo_ids:
+                        activomo = 1
+                        insertmo = insertmo + "INSERT OR REPLACE INTO motivo (id_servidor,nombre,active) VALUES(" + str(
+                            mo['id']) + ",'" + str(mo['name']) + "'," + str(activomo) + ");"
+
+                valsmo = {
+                    datamo: insertmo
                 }
 
 
@@ -458,6 +536,8 @@ class trackController(http.Controller):
             json_list['plazos_pago'].append(valstarifa)
             json_list['metodos_pago'].append(valsmep)
             json_list['cuentas_bancarias'].append(valscub)
+            json_list['precios'].append(valsppre)
+            json_list['motivos'].append(valsmo)
             lista.clear()
         return json.dumps(json_list)
 
