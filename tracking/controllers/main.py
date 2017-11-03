@@ -18,13 +18,13 @@ class trackController(http.Controller):
 
     @http.route('/track/login',type='http', auth='public', methods=['POST'], website=True,csrf = False)
     def loginlxtrack(self, **post):
-        print(post)
+        print(request.session.uid)
         if 'BD' in post and 'N' in post and 'P' in post:
             print("entro aqui")
             odoo = client.OdooClient(protocol='xmlrpc', host='localhost', dbname=post.get('BD'), port=8069,debug=True)
             odoo.ServerInfo()
             print("hola")
-            odoo.Authenticate('admin', 'admin')
+            uid= odoo.Authenticate('admin', 'admin')
             # print(odoo.Authenticate(request.params['N'], request.params['P']))
             if odoo.IsAuthenticated() is True:
                 db = post.get('BD')
@@ -50,10 +50,10 @@ class trackController(http.Controller):
                             'resultado': {
                                 "id_usuario": str(e['id']),
                                 "nombre_usuario": str(e['name']),
-                                "id_session_app": "1",
+                                "id_session_app": uid,
                                 "rastreo_frecuencia": "15",
-                                "rastreo_hora_inicio": time.strftime("%H:%M:%S"),
-                                "rastreo_hora_termino":time.strftime("%H:%M:%S"),
+                                "rastreo_hora_inicio": "07:00",
+                                "rastreo_hora_termino":"17:00",
                                 "rastreo_lunes": "1",
                                 "rastreo_martes": "1",
                                 "rastreo_miercoles": "1",
