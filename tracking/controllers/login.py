@@ -80,7 +80,7 @@ class trackController(http.Controller):
         else:
             return '{"​ error​ ": "INVALID"}'
 
-    @http.route('/track/sync', type='http', auth='none', methods=['POST'])
+    @http.route('/track/sync', type='http', auth='none', methods=['GET'])
     def track_web(self, debug=False, **k):
         print(lista[0])
         print(lista[1])
